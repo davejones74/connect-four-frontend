@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="480" viewBox="0 0 560 480">
+  <defs>
+    <mask id="holes">
+      <rect width="560" height="480" fill="white"/>
+      <circle cx="40" cy="40" r="32" fill="black"/>
+      <circle cx="120" cy="40" r="32" fill="black"/>
+      <circle cx="200" cy="40" r="32" fill="black"/>
+      <circle cx="280" cy="40" r="32" fill="black"/>
+      <circle cx="360" cy="40" r="32" fill="black"/>
+      <circle cx="440" cy="40" r="32" fill="black"/>
+      <circle cx="520" cy="40" r="32" fill="black"/>
+      <circle cx="40" cy="120" r="32" fill="black"/>
+      <circle cx="120" cy="120" r="32" fill="black"/>
+      <circle cx="200" cy="120" r="32" fill="black"/>
+      <circle cx="280" cy="120" r="32" fill="black"/>
+      <circle cx="360" cy="120" r="32" fill="black"/>
+      <circle cx="440" cy="120" r="32" fill="black"/>
+      <circle cx="520" cy="120" r="32" fill="black"/>
+      <circle cx="40" cy="200" r="32" fill="black"/>
+      <circle cx="120" cy="200" r="32" fill="black"/>
+      <circle cx="200" cy="200" r="32" fill="black"/>
+      <circle cx="280" cy="200" r="32" fill="black"/>
+      <circle cx="360" cy="200" r="32" fill="black"/>
+      <circle cx="440" cy="200" r="32" fill="black"/>
+      <circle cx="520" cy="200" r="32" fill="black"/>
+      <circle cx="40" cy="280" r="32" fill="black"/>
+      <circle cx="120" cy="280" r="32" fill="black"/>
+      <circle cx="200" cy="280" r="32" fill="black"/>
+      <circle cx="280" cy="280" r="32" fill="black"/>
+      <circle cx="360" cy="280" r="32" fill="black"/>
+      <circle cx="440" cy="280" r="32" fill="black"/>
+      <circle cx="520" cy="280" r="32" fill="black"/>
+      <circle cx="40" cy="360" r="32" fill="black"/>
+      <circle cx="120" cy="360" r="32" fill="black"/>
+      <circle cx="200" cy="360" r="32" fill="black"/>
+      <circle cx="280" cy="360" r="32" fill="black"/>
+      <circle cx="360" cy="360" r="32" fill="black"/>
+      <circle cx="440" cy="360" r="32" fill="black"/>
+      <circle cx="520" cy="360" r="32" fill="black"/>
+      <circle cx="40" cy="440" r="32" fill="black"/>
+      <circle cx="120" cy="440" r="32" fill="black"/>
+      <circle cx="200" cy="440" r="32" fill="black"/>
+      <circle cx="280" cy="440" r="32" fill="black"/>
+      <circle cx="360" cy="440" r="32" fill="black"/>
+      <circle cx="440" cy="440" r="32" fill="black"/>
+      <circle cx="520" cy="440" r="32" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="560" height="480" fill="#1d4ed8" mask="url(#holes)"/>
+</svg>

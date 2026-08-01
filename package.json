@@ -1,0 +1,13 @@
+{
+  "name": "conect4frontend",
+  "version": "1.0.0",
+  "description": "Connect4 frontend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

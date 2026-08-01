@@ -1,0 +1,194 @@
+:root {
+    --cell-size: 80px; /* Adjust based on your grid image dimensions */
+}
+
+.hidden {
+    display: none !important;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    height: 100vh;
+    margin: 0;
+    background-color: #222;
+    background-image: url('../images/board-background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.game-container {
+    position: relative;
+    width: calc(var(--cell-size) * 7);
+    height: calc(var(--cell-size) * 6);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 0 0 6px rgba(255, 255, 255, 0.08),
+        inset 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Base properties for all overlapping board layers */
+.board-background, .board-foreground, #pieces-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.board-background {
+    background: linear-gradient(180deg, #1a1a1a, #0a0a0a); /* Dark background so holes stand out */
+    z-index: 0;
+}
+
+#pieces-layer {
+    z-index: 1; /* Hidden behind the foreground, in front of background */
+}
+
+.board-foreground {
+    z-index: 2; /* Must be on top to hide the dropping pieces */
+    pointer-events: none; /* Allows clicks to pass through to the game logic */
+}
+
+/* The Game Piece */
+.piece {
+    position: absolute;
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border-radius: 50%;
+    /* Standard drop animation with bounce effect */
+    animation: dropPiece 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.piece.red {
+    background: radial-gradient(circle at 35% 30%, #ff8080, #ff3333 55%, #a60000);
+    box-shadow:
+        inset 0 4px 8px rgba(255, 255, 255, 0.4),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.piece.yellow {
+    background: radial-gradient(circle at 35% 30%, #ffe680, #ffcc00 55%, #b38600);
+    box-shadow:
+        inset 0 4px 8px rgba(255, 255, 255, 0.4),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* CSS Keyframes for sliding down */
+@keyframes dropPiece {
+    0% {
+        transform: translateY(-100px); /* Start above the board */
+    }
+    100% {
+        transform: translateY(var(--drop-destination)); /* Set dynamically by JS */
+    }
+}
+
+.reset-btn {
+    padding: 10px 24px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #2563eb;
+    color: #fff;
+    cursor: pointer;
+}
+
+.reset-btn:hover {
+    background-color: #1d4ed8;
+}
+
+/* Introduction screen */
+#intro-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+    text-align: center;
+    background: radial-gradient(circle at center, #1e293b, #0f172a);
+}
+
+.title {
+    margin: 0;
+    font-size: 96px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #ff3333, #ffcc00, #33ff33, #33ccff, #b833ff, #ff3333);
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.35));
+    animation: rainbowFlow 3s linear infinite, titleBounce 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.intro-text {
+    max-width: 560px;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.6;
+    color: #cbd5e1;
+    animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.start-btn {
+    padding: 14px 48px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff3333, #ffcc00);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 51, 51, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    animation: fadeInUp 0.8s ease-out 0.8s both;
+}
+
+.start-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 204, 0, 0.5);
+}
+
+@keyframes rainbowFlow {
+    to {
+        background-position: 200% center;
+    }
+}
+
+@keyframes titleBounce {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

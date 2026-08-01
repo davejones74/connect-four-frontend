@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect 4</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="intro-screen">
+        <h1 class="title">Connect4</h1>
+        <p class="intro-text">
+            Welcome to the game Connect4, a classic two-player strategy game where players compete to be the first to align four of their colored discs in a row. First released by Hasbro in 1974, it is widely considered an advanced, vertical variation of Tic-Tac-Toe
+        </p>
+        <button id="start-btn" class="start-btn">Start</button>
+    </div>
+
+    <div class="game-container hidden" id="game-container">
+        <!-- The background layer -->
+        <div class="board-background"></div>
+
+        <!-- The dynamic pieces container (Middle Layer) -->
+        <div id="pieces-layer"></div>
+
+        <!-- The foreground grid image with transparent holes (Top Layer) -->
+        <!-- Replace 'connect4-grid.svg' with your actual transparent grid asset -->
+        <img src="connect4-grid.svg" class="board-foreground" alt="Connect 4 Grid">
+    </div>
+
+    <button id="reset-btn" class="reset-btn hidden">Reset</button>
+
+    <script src="js/game.js"></script>
+</body>
+</html>
