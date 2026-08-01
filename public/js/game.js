@@ -3,8 +3,21 @@ const CELL_SIZE = 80; // Matches CSS --cell-size
 const introScreen = document.getElementById('intro-screen');
 const gameContainer = document.getElementById('game-container');
 const piecesLayer = document.getElementById('pieces-layer');
+const gameActions = document.getElementById('game-actions');
 const resetBtn = document.getElementById('reset-btn');
+const backBtn = document.getElementById('back-btn');
 const startBtn = document.getElementById('start-btn');
+const modeSelector = document.getElementById('mode-selector');
+const modeBadge = document.getElementById('mode-badge');
+
+const MODE_LABELS = {
+    hh: 'Human vs Human',
+    hc: 'Human vs Computer',
+    ch: 'Computer vs Human',
+    cc: 'Computer vs Computer'
+};
+
+let gameMode = 'hh';
 
 // Example function to drop a piece into a specific column and row
 function spawnPiece(column, row, color) {
@@ -49,17 +62,44 @@ gameContainer.addEventListener('click', (e) => {
     makeMove(column);
 });
 
-async function startGame() {
-    await fetch('/api/reset', { method: 'POST' });
+async function resetBoard() {
+    await fetch('/api/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: gameMode })
+    });
     piecesLayer.innerHTML = '';
+    modeBadge.dataset.mode = gameMode;
+    modeBadge.textContent = MODE_LABELS[gameMode] || gameMode;
+}
+
+modeSelector.addEventListener('click', (e) => {
+    const btn = e.target.closest('.mode-btn');
+    if (!btn) return;
+    modeSelector.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    gameMode = btn.dataset.mode;
+});
+
+async function startGame() {
+    await resetBoard();
     introScreen.classList.add('hidden');
     gameContainer.classList.remove('hidden');
-    resetBtn.classList.remove('hidden');
+    gameActions.classList.remove('hidden');
+    modeBadge.classList.remove('hidden');
+}
+
+async function goBack() {
+    await resetBoard();
+    piecesLayer.innerHTML = '';
+    introScreen.classList.remove('hidden');
+    gameContainer.classList.add('hidden');
+    gameActions.classList.add('hidden');
+    modeBadge.classList.add('hidden');
 }
 
 startBtn.addEventListener('click', startGame);
 
-resetBtn.addEventListener('click', async () => {
-    await fetch('/api/reset', { method: 'POST' });
-    piecesLayer.innerHTML = '';
-});
+backBtn.addEventListener('click', goBack);
+
+resetBtn.addEventListener('click', resetBoard);

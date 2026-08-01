@@ -10,6 +10,7 @@ const COLS = 7;
 let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 let currentPlayer = "red";
 let gameOver = false;
+let gameMode = "hh";
 
 function checkWin(row, col, color) {
     const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
@@ -73,7 +74,8 @@ app.post("/api/reset", (req, res) => {
     board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     currentPlayer = "red";
     gameOver = false;
-    res.json({ success: true });
+    gameMode = typeof req.body?.mode === "string" ? req.body.mode : "hh";
+    res.json({ success: true, mode: gameMode });
 });
 
 app.listen(PORT, () => {
