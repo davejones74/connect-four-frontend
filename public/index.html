@@ -13,14 +13,37 @@
         <p class="intro-text">
             Welcome to the game Connect4, a classic two-player strategy game where players compete to be the first to align four of their colored discs in a row. First released by Hasbro in 1974, it is widely considered an advanced, vertical variation of Tic-Tac-Toe
         </p>
-        <div class="mode-selector" id="mode-selector">
-            <button class="mode-btn selected" data-mode="hh">Human vs Human</button>
-            <button class="mode-btn" data-mode="hc">Human vs Computer</button>
-            <button class="mode-btn" data-mode="ch">Computer vs Human</button>
-            <button class="mode-btn" data-mode="cc">Computer vs Computer</button>
+        <div class="player-setup" id="player-setup">
+            <div class="player-panel" data-player="1">
+                <span class="player-label">Player 1</span>
+                <div class="type-selector">
+                    <button class="type-btn selected" data-type="HUMAN">Human</button>
+                    <button class="type-btn" data-type="AI">AI</button>
+                </div>
+                <div class="level-selector hidden"></div>
+            </div>
+
+            <div class="vs-logo">VS</div>
+
+            <div class="player-panel" data-player="2">
+                <span class="player-label">Player 2</span>
+                <div class="type-selector">
+                    <button class="type-btn selected" data-type="HUMAN">Human</button>
+                    <button class="type-btn" data-type="AI">AI</button>
+                </div>
+                <div class="level-selector hidden"></div>
+            </div>
         </div>
         <button id="start-btn" class="start-btn">Start</button>
+
+        <div class="saved-games">
+            <h2 class="saved-games-title">Saved Games</h2>
+            <div id="saved-games-list" class="saved-games-list"></div>
+            <p id="saved-games-empty" class="saved-games-empty hidden">No saved games yet</p>
+        </div>
     </div>
+
+    <h1 class="title game-title hidden" id="game-title">Connect4</h1>
 
     <div id="mode-badge" class="mode-badge hidden" data-mode="hh">Human vs Human</div>
 
@@ -38,6 +61,7 @@
         <button id="reset-btn" class="reset-btn">Reset</button>
     </div>
 
+    <script src="js/sound.js"></script>
     <script src="js/game.js"></script>
 </body>
 </html>

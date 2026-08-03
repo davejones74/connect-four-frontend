@@ -3,81 +3,36 @@ const express = require("express");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const ROWS = 6;
-const COLS = 7;
-
-let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-let currentPlayer = "red";
-let gameOver = false;
-let gameMode = "hh";
-
-function checkWin(row, col, color) {
-    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
-    for (const [dr, dc] of directions) {
-        let count = 1;
-        for (const sign of [1, -1]) {
-            let r = row + dr * sign;
-            let c = col + dc * sign;
-            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === color) {
-                count++;
-                r += dr * sign;
-                c += dc * sign;
-            }
-        }
-        if (count >= 4) return true;
-    }
-    return false;
-}
-
-function isBoardFull() {
-    return board.every(row => row.every(cell => cell !== null));
-}
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-app.post("/api/make-move", (req, res) => {
-    if (gameOver) {
-        return res.status(400).json({ success: false, error: "Game is over, reset to play again" });
-    }
-
-    const { column } = req.body;
-    if (typeof column !== "number" || !Number.isInteger(column) || column < 0 || column >= COLS) {
-        return res.status(400).json({ success: false, error: "Invalid column" });
-    }
-
-    for (let r = ROWS - 1; r >= 0; r--) {
-        if (board[r][column] === null) {
-            board[r][column] = currentPlayer;
-            const color = currentPlayer;
-
-            if (checkWin(r, column, color)) {
-                gameOver = true;
-                return res.json({ success: true, row: r, color, gameOver: true, winner: color });
-            }
-
-            if (isBoardFull()) {
-                gameOver = true;
-                return res.json({ success: true, row: r, color, gameOver: true, winner: null });
-            }
-
-            currentPlayer = currentPlayer === "red" ? "yellow" : "red";
-            return res.json({ success: true, row: r, color, gameOver: false, winner: null });
+app.use("/api", async (req, res) => {
+    const body = ["POST", "PUT", "PATCH"].includes(req.method)
+        ? JSON.stringify(req.body ?? {})
+        : undefined;
+    try {
+        const response = await fetch(BACKEND_URL + req.originalUrl, {
+            method: req.method,
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            body
+        });
+        const text = await response.text();
+        res.status(response.status);
+        if (response.headers.get("content-type")) {
+            res.set("Content-Type", response.headers.get("content-type"));
         }
+        res.send(text);
+    } catch (err) {
+        res.status(502).json({ message: `Backend unavailable at ${BACKEND_URL}: ${err.message}` });
     }
-
-    return res.status(400).json({ success: false, error: "Column is full" });
-});
-
-app.post("/api/reset", (req, res) => {
-    board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-    currentPlayer = "red";
-    gameOver = false;
-    gameMode = typeof req.body?.mode === "string" ? req.body.mode : "hh";
-    res.json({ success: true, mode: gameMode });
 });
 
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Proxying /api requests to ${BACKEND_URL}`);
 });

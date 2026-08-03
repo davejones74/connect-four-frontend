@@ -7,99 +7,521 @@ const gameActions = document.getElementById('game-actions');
 const resetBtn = document.getElementById('reset-btn');
 const backBtn = document.getElementById('back-btn');
 const startBtn = document.getElementById('start-btn');
-const modeSelector = document.getElementById('mode-selector');
 const modeBadge = document.getElementById('mode-badge');
+const gameTitle = document.getElementById('game-title');
+const savedGamesList = document.getElementById('saved-games-list');
+const savedGamesEmpty = document.getElementById('saved-games-empty');
 
-const MODE_LABELS = {
-    hh: 'Human vs Human',
-    hc: 'Human vs Computer',
-    ch: 'Computer vs Human',
-    cc: 'Computer vs Computer'
-};
+const ROWS = 6;
+const COLS = 7;
+const EMPTY_BOARD = 'E'.repeat(ROWS * COLS);
 
-let gameMode = 'hh';
+let player1Type = 'HUMAN';
+let player2Type = 'HUMAN';
+let player1Level = 5;
+let player2Level = 5;
+let gameId = null;
+let currentGame = null;
+let board = EMPTY_BOARD;
+let currentTurn = 1;
+let status = 'IN_PROGRESS';
+let winner = null;
+let busy = false;
+let generation = 0;
 
-// Example function to drop a piece into a specific column and row
-function spawnPiece(column, row, color) {
-    const piece = document.createElement('div');
-
-    // Add classes for styling and color
-    piece.classList.add('piece', color);
-
-    // Calculate horizontal positioning
-    piece.style.left = `${column * CELL_SIZE}px`;
-
-    // Calculate exactly how far down the piece must slide
-    const destinationY = row * CELL_SIZE;
-    piece.style.setProperty('--drop-destination', `${destinationY}px`);
-
-    // Inject the piece into the middle layer
-    piecesLayer.appendChild(piece);
+function cellAt(b, row, col) {
+    return b.charAt(row * COLS + col);
 }
 
-async function makeMove(column) {
-    const res = await fetch('/api/make-move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ column })
-    });
-    const data = await res.json();
-
-    if (data.success) {
-        spawnPiece(column, data.row, data.color);
-        if (data.gameOver) {
-            const message = data.winner ? `${data.winner} wins!` : 'Draw!';
-            setTimeout(() => alert(message), 700);
+function firstEmptyRow(b, col) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (cellAt(b, row, col) === 'E') {
+            return row;
         }
-    } else {
-        alert(data.error || 'Invalid move');
+    }
+    return -1;
+}
+
+function setCell(b, row, col, piece) {
+    const i = row * COLS + col;
+    return b.slice(0, i) + piece + b.slice(i + 1);
+}
+
+function checkWin(b, row, col, piece) {
+    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dr, dc] of directions) {
+        let count = 1;
+        for (const sign of [1, -1]) {
+            let r = row + dr * sign;
+            let c = col + dc * sign;
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && cellAt(b, r, c) === piece) {
+                count++;
+                r += dr * sign;
+                c += dc * sign;
+            }
+        }
+        if (count >= 4) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function spawnPiece(column, row, color, animate = true) {
+    const piece = document.createElement('div');
+    piece.classList.add('piece', color);
+    piece.style.left = `${column * CELL_SIZE}px`;
+    const destinationY = row * CELL_SIZE;
+    piece.style.setProperty('--drop-destination', `${destinationY}px`);
+    if (!animate) {
+        piece.style.animation = 'none';
+        piece.style.transform = `translateY(${destinationY}px)`;
+    }
+    piecesLayer.appendChild(piece);
+
+    if (animate) {
+        Sound.drop();
+    }
+}
+
+async function api(path, options = {}) {
+    const res = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data.message || `Request failed (${res.status})`);
+    }
+    return data;
+}
+
+function buildGameRequest() {
+    return {
+        gameType: (player1Type === 'HUMAN' && player2Type === 'HUMAN') ? 'HUMAN_VS_HUMAN' : 'HUMAN_VS_AI',
+        player1Name: 'Player 1',
+        player2Name: 'Player 2',
+        player1Type,
+        player2Type,
+        player1AiLevel: player1Type === 'AI' ? `A${player1Level}` : null,
+        player2AiLevel: player2Type === 'AI' ? `A${player2Level}` : null,
+        currentTurn: 1,
+        winner: 0,
+        status: 'IN_PROGRESS'
+    };
+}
+
+function buildRequestFromGame(game) {
+    return {
+        gameType: game.gameType,
+        player1Name: game.player1Name,
+        player2Name: game.player2Name,
+        player1Type: game.player1Type,
+        player2Type: game.player2Type,
+        player1AiLevel: game.player1AiLevel,
+        player2AiLevel: game.player2AiLevel,
+        currentTurn: game.currentTurn ?? 1,
+        winner: game.winner ?? 0
+    };
+}
+
+function playerLabel(type, level) {
+    if (type !== 'AI') return 'Human';
+    const digits = String(level ?? '').replace(/\D/g, '');
+    return `AI ${digits || '5'}`;
+}
+
+function matchupLabel() {
+    return `${playerLabel(player1Type, player1Level)} vs ${playerLabel(player2Type, player2Level)}`;
+}
+
+function isHumanTurn() {
+    if (!currentGame) return false;
+    return currentTurn === 1
+        ? currentGame.player1Type === 'HUMAN'
+        : currentGame.player2Type === 'HUMAN';
+}
+
+function isAiTurn() {
+    if (!currentGame) return false;
+    return currentTurn === 1
+        ? currentGame.player1Type === 'AI'
+        : currentGame.player2Type === 'AI';
+}
+
+async function deleteCurrentGame() {
+    if (!gameId) return;
+    try {
+        await api(`/api/games/${gameId}`, { method: 'DELETE' });
+    } catch (_) {
+        // Ignore cleanup failures
+    }
+    gameId = null;
+}
+
+async function startNewGame() {
+    generation++;
+    const gen = generation;
+    busy = false;
+
+    const game = await api('/api/games', {
+        method: 'POST',
+        body: JSON.stringify(buildGameRequest())
+    });
+    if (gen !== generation) return;
+
+    await api(`/api/games/${game.id}/board`, {
+        method: 'POST',
+        body: JSON.stringify({ board: EMPTY_BOARD })
+    });
+    if (gen !== generation) return;
+
+    gameId = game.id;
+    currentGame = game;
+    board = EMPTY_BOARD;
+    currentTurn = 1;
+    status = 'IN_PROGRESS';
+    winner = null;
+    piecesLayer.innerHTML = '';
+
+    if (isAiTurn()) {
+        setTimeout(() => aiMove(gen), 500);
+    }
+}
+
+async function humanMove(column) {
+    if (busy || status !== 'IN_PROGRESS' || !isHumanTurn()) return;
+
+    const row = firstEmptyRow(board, column);
+    if (row < 0) return;
+
+    const gen = generation;
+    const piece = currentTurn === 1 ? 'R' : 'Y';
+    busy = true;
+
+    try {
+        board = setCell(board, row, column, piece);
+        spawnPiece(column, row, piece === 'R' ? 'red' : 'yellow');
+
+        const won = checkWin(board, row, column, piece);
+        const draw = !won && board.indexOf('E') === -1;
+
+        let newWinner = 0;
+        if (won) {
+            status = 'COMPLETED';
+            winner = currentTurn;
+            newWinner = currentTurn;
+        } else if (draw) {
+            status = 'COMPLETED';
+            winner = 0;
+        } else {
+            currentTurn = currentTurn === 1 ? 2 : 1;
+        }
+
+        const request = buildRequestFromGame(currentGame);
+        request.currentTurn = currentTurn;
+        request.winner = newWinner;
+        request.status = status;
+
+        await api(`/api/games/${gameId}/board`, {
+            method: 'PUT',
+            body: JSON.stringify({ board })
+        });
+        if (gen !== generation) return;
+
+        await api(`/api/games/${gameId}`, {
+            method: 'PUT',
+            body: JSON.stringify(request)
+        });
+        if (gen !== generation) return;
+
+        if (status === 'COMPLETED') {
+            setTimeout(() => showResult(winner), 700);
+            return;
+        }
+        if (isAiTurn()) {
+            setTimeout(() => aiMove(gen), 600);
+        }
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        busy = false;
+    }
+}
+
+async function aiMove(gen) {
+    if (gen !== generation || busy || status !== 'IN_PROGRESS' || !isAiTurn()) return;
+
+    busy = true;
+    try {
+        const prevBoard = board;
+        const resp = await api(`/api/games/${gameId}/next-move`, { method: 'POST' });
+        if (gen !== generation) return;
+
+        const column = resp.column - 1;
+        let row = -1;
+        for (let r = 0; r < ROWS; r++) {
+            if (resp.board.charAt(r * COLS + column) !== prevBoard.charAt(r * COLS + column)) {
+                row = r;
+                break;
+            }
+        }
+        const piece = currentTurn === 1 ? 'R' : 'Y';
+
+        board = resp.board;
+        status = resp.status;
+        winner = resp.winner ?? null;
+        currentTurn = resp.currentTurn ?? null;
+
+        spawnPiece(column, row, piece === 'R' ? 'red' : 'yellow');
+
+        if (status !== 'IN_PROGRESS') {
+            setTimeout(() => showResult(winner), 700);
+            return;
+        }
+        if (isAiTurn()) {
+            setTimeout(() => aiMove(gen), 700);
+        }
+    } catch (err) {
+        alert('AI move failed: ' + err.message);
+    } finally {
+        busy = false;
+    }
+}
+
+function showResult(win) {
+    if (win !== 0) {
+        Sound.victory();
+    }
+    const message = win === 0 ? 'Draw!' : `Player ${win} wins!`;
+    alert(message);
+}
+
+function renderBoardState(boardString) {
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            const cell = boardString.charAt(row * COLS + col);
+            if (cell === 'R') {
+                spawnPiece(col, row, 'red', false);
+            } else if (cell === 'Y') {
+                spawnPiece(col, row, 'yellow', false);
+            }
+        }
+    }
+}
+
+async function resumeGame(id) {
+    generation++;
+    const gen = generation;
+    busy = false;
+
+    try {
+        const game = await api(`/api/games/${id}`);
+        if (gen !== generation) return;
+        if (game.status !== 'IN_PROGRESS') {
+            await loadSavedGames();
+            return;
+        }
+
+        const boardResp = await api(`/api/games/${id}/board`);
+        if (gen !== generation) return;
+
+        gameId = game.id;
+        currentGame = game;
+        board = boardResp.board;
+        currentTurn = game.currentTurn ?? 1;
+        status = game.status;
+        winner = game.winner ?? null;
+        player1Type = game.player1Type;
+        player2Type = game.player2Type;
+        player1Level = Number(String(game.player1AiLevel ?? '').replace(/\D/g, '')) || 5;
+        player2Level = Number(String(game.player2AiLevel ?? '').replace(/\D/g, '')) || 5;
+
+        piecesLayer.innerHTML = '';
+        renderBoardState(board);
+
+        modeBadge.textContent = matchupLabel();
+
+        introScreen.classList.add('hidden');
+        gameTitle.classList.remove('hidden');
+        gameContainer.classList.remove('hidden');
+        gameActions.classList.remove('hidden');
+        modeBadge.classList.remove('hidden');
+
+        if (isAiTurn()) {
+            setTimeout(() => aiMove(gen), 700);
+        }
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function buildGameCard(game) {
+    const card = document.createElement('div');
+    card.className = 'saved-game-card';
+
+    const info = document.createElement('div');
+    info.className = 'saved-game-info';
+
+    const name = document.createElement('div');
+    name.className = 'saved-game-name';
+    name.textContent = `Game #${game.id}`;
+
+    const matchup = document.createElement('div');
+    matchup.className = 'saved-game-detail';
+    matchup.textContent = `${playerLabel(game.player1Type, game.player1AiLevel)} vs ${playerLabel(game.player2Type, game.player2AiLevel)}`;
+
+    const turn = document.createElement('div');
+    turn.className = 'saved-game-detail';
+    turn.textContent = `Player ${game.currentTurn ?? 1} to move`;
+
+    const lastPlayed = document.createElement('div');
+    lastPlayed.className = 'saved-game-detail';
+    lastPlayed.textContent = `Last played ${game.updatedAt ? new Date(game.updatedAt).toLocaleString() : 'Unknown'}`;
+
+    info.append(name, matchup, turn, lastPlayed);
+
+    const actions = document.createElement('div');
+    actions.className = 'saved-game-actions';
+
+    const resumeBtn = document.createElement('button');
+    resumeBtn.className = 'resume-btn';
+    resumeBtn.textContent = 'Resume';
+    resumeBtn.addEventListener('click', () => resumeGame(game.id));
+
+    const archiveBtn = document.createElement('button');
+    archiveBtn.className = 'archive-btn';
+    archiveBtn.textContent = 'Archive';
+    archiveBtn.addEventListener('click', () => archiveGame(game.id));
+
+    actions.append(resumeBtn, archiveBtn);
+    card.append(info, actions);
+    return card;
+}
+
+async function loadSavedGames() {
+    let games;
+    try {
+        games = await api('/api/games');
+    } catch (err) {
+        savedGamesEmpty.textContent = 'Could not load saved games';
+        savedGamesEmpty.classList.remove('hidden');
+        savedGamesList.innerHTML = '';
+        return;
+    }
+
+    const resumable = games.filter(g => g.status === 'IN_PROGRESS');
+    savedGamesList.innerHTML = '';
+
+    if (resumable.length === 0) {
+        savedGamesEmpty.textContent = 'No saved games yet';
+        savedGamesEmpty.classList.remove('hidden');
+        return;
+    }
+
+    savedGamesEmpty.classList.add('hidden');
+    resumable.forEach(game => savedGamesList.appendChild(buildGameCard(game)));
+}
+
+async function archiveGame(id) {
+    try {
+        await api(`/api/games/${id}/archive`, { method: 'PATCH' });
+        await loadSavedGames();
+    } catch (err) {
+        alert(err.message);
     }
 }
 
 gameContainer.addEventListener('click', (e) => {
+    if (busy || status !== 'IN_PROGRESS' || !isHumanTurn()) return;
     const rect = gameContainer.getBoundingClientRect();
     const column = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    makeMove(column);
+    if (column < 0 || column >= COLS) return;
+    humanMove(column);
 });
 
 async function resetBoard() {
-    await fetch('/api/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: gameMode })
-    });
     piecesLayer.innerHTML = '';
-    modeBadge.dataset.mode = gameMode;
-    modeBadge.textContent = MODE_LABELS[gameMode] || gameMode;
+    modeBadge.textContent = matchupLabel();
+    await startNewGame();
 }
 
-modeSelector.addEventListener('click', (e) => {
-    const btn = e.target.closest('.mode-btn');
-    if (!btn) return;
-    modeSelector.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    gameMode = btn.dataset.mode;
-});
+function initPlayerSetup() {
+    document.querySelectorAll('.player-panel').forEach(panel => {
+        const playerNum = Number(panel.dataset.player);
+        const typeSelector = panel.querySelector('.type-selector');
+        const levelSelector = panel.querySelector('.level-selector');
+
+        typeSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('.type-btn');
+            if (!btn) return;
+            typeSelector.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if (playerNum === 1) {
+                player1Type = btn.dataset.type;
+            } else {
+                player2Type = btn.dataset.type;
+            }
+            levelSelector.classList.toggle('hidden', btn.dataset.type !== 'AI');
+        });
+
+        for (let i = 1; i <= 10; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'level-btn';
+            btn.textContent = i;
+            btn.dataset.level = i;
+            if (i === (playerNum === 1 ? player1Level : player2Level)) {
+                btn.classList.add('selected');
+            }
+            btn.addEventListener('click', () => {
+                levelSelector.querySelectorAll('.level-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                if (playerNum === 1) {
+                    player1Level = i;
+                } else {
+                    player2Level = i;
+                }
+            });
+            levelSelector.appendChild(btn);
+        }
+    });
+}
 
 async function startGame() {
+    Sound.unlock();
     await resetBoard();
     introScreen.classList.add('hidden');
+    gameTitle.classList.remove('hidden');
     gameContainer.classList.remove('hidden');
     gameActions.classList.remove('hidden');
     modeBadge.classList.remove('hidden');
+    Sound.welcome();
 }
 
 async function goBack() {
-    await resetBoard();
+    generation++;
+    busy = false;
+    if (gameId && board === EMPTY_BOARD) {
+        await deleteCurrentGame();
+    }
     piecesLayer.innerHTML = '';
+    gameId = null;
+    currentGame = null;
+    board = EMPTY_BOARD;
+    currentTurn = 1;
+    status = 'IN_PROGRESS';
+    winner = null;
     introScreen.classList.remove('hidden');
+    gameTitle.classList.add('hidden');
     gameContainer.classList.add('hidden');
     gameActions.classList.add('hidden');
     modeBadge.classList.add('hidden');
+    await loadSavedGames();
 }
 
 startBtn.addEventListener('click', startGame);
-
 backBtn.addEventListener('click', goBack);
-
 resetBtn.addEventListener('click', resetBoard);
+
+initPlayerSetup();
+loadSavedGames();
