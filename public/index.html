@@ -47,13 +47,27 @@
 
     <div id="mode-badge" class="mode-badge hidden" data-mode="hh">Human vs Human</div>
 
-    <div class="game-container hidden" id="game-container">
-        <!-- The dynamic pieces container (Middle Layer) -->
-        <div id="pieces-layer"></div>
+    <div class="game-row hidden" id="game-row">
+        <div class="turn-panel" id="turn-p1">
+            <div class="turn-avatar">🧑</div>
+            <div class="turn-label">Player 1</div>
+            <div class="turn-disc red"></div>
+        </div>
 
-        <!-- The foreground grid image with transparent holes (Top Layer) -->
-        <!-- Replace 'connect4-grid.svg' with your actual transparent grid asset -->
-        <img src="connect4-grid.svg" class="board-foreground" alt="Connect 4 Grid">
+        <div class="game-container" id="game-container">
+            <!-- The dynamic pieces layer (Middle Layer) -->
+            <div id="pieces-layer"></div>
+
+            <!-- The foreground overlay with transparent holes (Top Layer) -->
+            <!-- Replace 'connect4-grid.svg' with your actual transparent grid asset -->
+            <img src="connect4-grid.svg" class="board-foreground" alt="Connect 4 Grid">
+        </div>
+
+        <div class="turn-panel" id="turn-p2">
+            <div class="turn-avatar">🧑</div>
+            <div class="turn-label">Player 2</div>
+            <div class="turn-disc yellow"></div>
+        </div>
     </div>
 
     <div class="game-actions hidden" id="game-actions">

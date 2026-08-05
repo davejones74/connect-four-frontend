@@ -115,3 +115,47 @@ The Express server proxies all `/api` requests to the Java backend. The backend'
 - **Cell size**: adjust `--cell-size` in `public/css/style.css` (and keep `CELL_SIZE` in `public/js/game.js` in sync).
 - **Foreground grid**: replace `public/connect4-grid.svg` with your own transparent grid image (referenced in `public/index.html`).
 - **Page background**: swap `public/images/board-background.png` for your own image.
+
+## Docker Support
+
+The entire game suite (frontend, backend, and database) can be launched using Docker Compose. This setup handles the PostgreSQL database automatically.
+
+### Running with Docker
+1. Ensure you have [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed.
+2. Navigate to the root directory:
+   ```bash
+   cd E:\Development\Repositories\Conect4Frontend
+   ```
+3. Start all services (frontend, backend, and DB):
+   ```bash
+   docker-compose up -d
+   ```
+4. To stop all services:
+   ```bash
+   docker-compose down
+   ```
+
+### Picking up code changes
+
+`docker-compose up` only (re)creates containers and **reuses previously built images**, so edits you make to the source won't show up unless you rebuild the image. To apply your latest changes:
+
+- **One-off rebuild (no script needed):**
+  ```bash
+  docker-compose up -d --build
+  ```
+  The `--build` flag forces Docker to rebuild images from the current source before (re)creating the containers. Rebuild only the frontend with `docker-compose up -d --build frontend`.
+
+- **Using the provided build script:**
+  ```bash
+  .\build.ps1            # rebuild everything and restart (detached)
+  .\build.ps1 -Frontend  # rebuild only the frontend image
+  .\build.ps1 -Backend   # rebuild only the backend image
+  .\build.ps1 -NoDetach  # rebuild, then run attached (see logs)
+  ```
+
+  The script also falls back to `docker compose` (v2) automatically if the legacy `docker-compose` command isn't installed.
+
+> **Important:** the frontend Docker image is baked at build time via its `Dockerfile` (`COPY . .`). There is no volume mount for the frontend source, so you **must rebuild** (`--build`) to see any HTML/CSS/JS changes. If you rebuild but still see stale output, clear the cache with `docker-compose build --no-cache frontend`.
+
+Note: When running inside Docker, the `BACKEND_URL` should be set to `http://backend:8080`. Since the Express server acts as a proxy, it needs to resolve the internal container name instead of `localhost` to reach the backend.
+```

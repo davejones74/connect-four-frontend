@@ -3,6 +3,9 @@ const CELL_SIZE = 80; // Matches CSS --cell-size
 const introScreen = document.getElementById('intro-screen');
 const gameContainer = document.getElementById('game-container');
 const piecesLayer = document.getElementById('pieces-layer');
+const gameRow = document.getElementById('game-row');
+const turnP1 = document.getElementById('turn-p1');
+const turnP2 = document.getElementById('turn-p2');
 const gameActions = document.getElementById('game-actions');
 const resetBtn = document.getElementById('reset-btn');
 const backBtn = document.getElementById('back-btn');
@@ -135,6 +138,22 @@ function matchupLabel() {
     return `${playerLabel(player1Type, player1Level)} vs ${playerLabel(player2Type, player2Level)}`;
 }
 
+function updateTurnIndicators() {
+    const p1Avatar = turnP1.querySelector('.turn-avatar');
+    const p1Label = turnP1.querySelector('.turn-label');
+    const p2Avatar = turnP2.querySelector('.turn-avatar');
+    const p2Label = turnP2.querySelector('.turn-label');
+
+    p1Avatar.textContent = player1Type === 'AI' ? '🤖' : '🧑';
+    p1Label.textContent = playerLabel(player1Type, player1Level);
+    p2Avatar.textContent = player2Type === 'AI' ? '🤖' : '🧑';
+    p2Label.textContent = playerLabel(player2Type, player2Level);
+
+    const activePanel = currentTurn === 1 ? turnP1 : turnP2;
+    turnP1.classList.toggle('active', currentTurn === 1);
+    turnP2.classList.toggle('active', currentTurn === 2);
+}
+
 function isHumanTurn() {
     if (!currentGame) return false;
     return currentTurn === 1
@@ -184,6 +203,8 @@ async function startNewGame() {
     winner = null;
     piecesLayer.innerHTML = '';
 
+    updateTurnIndicators();
+
     if (isAiTurn()) {
         setTimeout(() => aiMove(gen), 500);
     }
@@ -216,6 +237,7 @@ async function humanMove(column) {
             winner = 0;
         } else {
             currentTurn = currentTurn === 1 ? 2 : 1;
+            updateTurnIndicators();
         }
 
         const request = buildRequestFromGame(currentGame);
@@ -272,6 +294,8 @@ async function aiMove(gen) {
         status = resp.status;
         winner = resp.winner ?? null;
         currentTurn = resp.currentTurn ?? null;
+
+        updateTurnIndicators();
 
         spawnPiece(column, row, piece === 'R' ? 'red' : 'yellow');
 
@@ -341,10 +365,11 @@ async function resumeGame(id) {
         renderBoardState(board);
 
         modeBadge.textContent = matchupLabel();
+        updateTurnIndicators();
 
         introScreen.classList.add('hidden');
         gameTitle.classList.remove('hidden');
-        gameContainer.classList.remove('hidden');
+        gameRow.classList.remove('hidden');
         gameActions.classList.remove('hidden');
         modeBadge.classList.remove('hidden');
 
@@ -492,7 +517,7 @@ async function startGame() {
     await resetBoard();
     introScreen.classList.add('hidden');
     gameTitle.classList.remove('hidden');
-    gameContainer.classList.remove('hidden');
+    gameRow.classList.remove('hidden');
     gameActions.classList.remove('hidden');
     modeBadge.classList.remove('hidden');
     Sound.welcome();
@@ -513,7 +538,7 @@ async function goBack() {
     winner = null;
     introScreen.classList.remove('hidden');
     gameTitle.classList.add('hidden');
-    gameContainer.classList.add('hidden');
+    gameRow.classList.add('hidden');
     gameActions.classList.add('hidden');
     modeBadge.classList.add('hidden');
     await loadSavedGames();
