@@ -135,6 +135,8 @@ The entire game suite (frontend, backend, and database) can be launched using Do
    docker-compose down
    ```
 
+> **Note:** the backend image is built from a multi-stage `Dockerfile` that compiles the Spring Boot JAR *inside* Docker (`./gradlew bootJar`). You don't need to build or install the JAR locally before `docker-compose up` — it's fully self-contained.
+
 ### Picking up code changes
 
 `docker-compose up` only (re)creates containers and **reuses previously built images**, so edits you make to the source won't show up unless you rebuild the image. To apply your latest changes:
